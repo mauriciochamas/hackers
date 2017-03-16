@@ -1,0 +1,112 @@
+library(ggplot2)
+path <- "C:/Users/Usuario/Documents/cursos/Data Analysis"
+setwd(path)
+ufo <- read.csv("ufo_awesome.tsv.txt", sep = "\t", stringsAsFactors = F, header = F, na.strings = "")
+head(ufo)
+names(ufo) <- c("date.occured", "date.reported", "location", "short.description", 
+                "duration", "long.description")
+ufo$date.occured <- as.Date(ufo$date.occured, format = "%Y%m%d")
+ufo$date.reported <- as.Date(ufo$date.reported, format = "%Y%m%d")
+str(ufo)
+nchar(ufo$date.occured)
+table(nchar(ufo$date.occured))
+which(nchar(ufo$date.occured)==2)
+ufo$date.occured[46585]
+ufo$date.occured[nchar(ufo$date.occured)==7]
+nchar(ufo$date.reported)
+table(nchar(ufo$date.reported))
+which(nchar(ufo$date.reported)==2)
+ufo$date.reported[756]
+which(nchar(ufo$date.reported)==6)
+ufo$date.reported[11162]
+ufo$date.reported[nchar(ufo$date.reported)==6]
+head(ufo[which(nchar(ufo$date.occured) != 5 | nchar(ufo$date.reported) != 5), 1])
+#bad.rows <- ifelse(nchar(ufo$date.occured) == 5 & nchar(ufo$date.reported) == 5, F, T)
+#table(bad.rows)
+good.rows <- ifelse(nchar(ufo$date.occured) == 2 | nchar(ufo$date.reported) == 2, F, T)
+table(good.rows)
+length(which(!good.rows))
+city.state[is.na(city.state)]
+summary(ufo)
+ufo <- ufo[good.rows, ]
+#location data
+loca <- function(x){
+  split.location <- tryCatch(strsplit(x,",")[[1]], error = function(e) return(c(NA, NA)))
+  clean.location <- gsub("^ ","", split.location)
+  if (length(clean.location)>2){
+    return(c(NA, NA))
+  }
+  else{
+    return(clean.location)
+  }
+}
+city.state <- lapply(ufo$location, loca)
+head(city.state)
+table(is.na(city.state))
+which(is.na(city.state))
+city.state[18997]
+ufo$location[18997]
+location.mat <- do.call(rbind, city.state)
+head(location.mat)
+ufo <- transform(ufo, USCity = location.mat[, 1], USState=tolower(location.mat[, 2]),
+                 stringsAsFactors = F)
+head(loc.split)
+library(dplyr)
+colSums(is.na(ufo))
+ufo.fin <- subset(ufo, !is.na(ufo$USCity))
+colSums(is.na(ufo.fin))
+head(ufo.fin)
+summary(ufo.fin$date.occured)
+qhist <- ggplot(ufo.fin, aes(date.occured)) + geom_histogram()
+ggplot(ufo.fin, aes(date.occured)) + geom_histogram(bins = 50)
+ufo.fin <- subset(ufo.fin, date.occured >= as.Date("1990-01-01"))
+ufo.fin <- filter(ufo.fin, date.occured >= as.Date("1990-01-01"))
+summary(ufo.fin)
+ggplot(ufo.fin, aes(date.occured)) + geom_histogram(bins = 20)
+ufo.fin$ym <- strftime(ufo.fin$date.occured, format = "%Y-%m")
+head(ufo.fin$ym)
+library(plyr)
+library(dplyr)
+table(nchar(ufo.fin$USState))
+table(nchar(ufo.fin$USState)==64)
+which(nchar(ufo.fin$USState)==64)
+ufo.fin$USState[9916]
+ufo.fin$USState[which(nchar(ufo.fin$USState)==1)]
+good.state <- ifelse(nchar(ufo.fin$USState) != 2, F, T)
+table(good.state)
+ufo.fin <- ufo.fin[good.state, ]
+table(nchar(ufo.fin$USState))
+sight.count <- ddply(ufo.fin, .(USState, ym), nrow)
+head(sight.count)
+date.range <- seq.Date(from = as.Date(min(ufo.fin$date.occured)), 
+                       to = as.Date(max(ufo.fin$date.occured)), by = "month")
+date.strings <- strftime(date.range, "%Y-%m")
+state <- ufo.fin$USState
+state.date <- lapply(state, function(s) cbind(s, date.strings))
+state.date <- data.frame(do.call(rbind, state.date), stringsAsFactors = F)
+head(state.date)
+rm(location.mat, ufo)
+rm(good.rows, qhist, path)
+head(sight.count)
+#all.sight <- merge(state.date, sight.count, by.x = c("s", "date.strings"), 
+#                   by.y = c("USState", "ym"), all = T)
+all.sight <- sight.count
+names(all.sight) <- c("State", "YearMonth", "Sightings")
+colSums(is.na(all.sight))
+str(all.sight)
+all.sight$Sightings[is.na(all.sight$Sightings)]
+#all.sight$YearMonth <- as.Date(rep(date.range, length(state)))
+all.sight$YearMonth <- as.Date(all.sight$YearMonth, format = "%Y%m")
+all.sight$State <- as.factor(toupper(all.sight$State))
+head(all.sight)
+#visualization
+ggplot(all.sight, aes(YearMonth, Sightings)) + geom_line(color = "darkblue") +
+  theme_bw() + 
+  xlab("Time") + ylab("Number of sightings") 
+head(cars)
+my.mean <- function(x){
+  return(sum(x)/length(x))
+}
+my.mean(cars[,1])
+range(cars[,2])
+quantile(cars[,2])
