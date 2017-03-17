@@ -1,0 +1,117 @@
+library(ggplot2)
+path <- "C:/Users/Usuario/Documents/cursos/Data Analysis/forHackers"
+setwd(path)
+ages <- read.csv("longevity.csv")
+names(ages)
+str(ages)
+colSums(is.na(ages))
+table(ages$Smokes)
+table(ages$AgeAtDeath)
+sapply(split(ages$AgeAtDeath, ages$Smokes), mean, na.rm = T)
+hist(ages$AgeAtDeath)
+ages$Smokes2 <- as.factor(ages$Smokes)
+ggplot(ages, aes(x = AgeAtDeath, fill = Smokes2)) + geom_density()
+ggplot(ages, aes(x = AgeAtDeath, fill = Smokes2)) + geom_density() + facet_grid(.~Smokes)
+ggplot(ages, aes(x = Smokes2, y = AgeAtDeath)) + geom_boxplot() + facet_grid(.~Smokes)
+ggplot(ages, aes(x = AgeAtDeath, fill = factor(Smokes))) + geom_density() + facet_grid(Smokes~.)
+g <- mean(ages$AgeAtDeath)
+with(ages, mean((AgeAtDeath-g)^2))
+g.accuracy <- data.frame()
+for(g in seq(60, 90, by = 1)) {
+  prediction.error <- with(ages, mean((AgeAtDeath - g)^2))
+  g.accuracy <- rbind(g.accuracy, data.frame(Guess = g, Error = prediction.error))
+}
+g.accuracy
+ggplot(g.accuracy, aes(Guess, Error)) + geom_line() + geom_point()
+ages$AgeAtDeath2 <- ages$AgeAtDeath + 2
+#Regression
+constant.guess <- with(ages, mean(AgeAtDeath))
+with(ages, sqrt(mean((AgeAtDeath - constant.guess)^2)))
+smokers.g <- mean(ages$AgeAtDeath[ages$Smokes==1])
+nosmokers.g <- mean(ages$AgeAtDeath[ages$Smokes==0])
+ages <- transform(ages, newprediction = ifelse(Smokes == 0, nosmokers.g, smokers.g))
+with(ages, sqrt(mean((AgeAtDeath - newprediction)^2)))
+sqrt((mean((ages$AgeAtDeath-ages$newprediction)^2)))
+library(Metrics)
+#rmse(actual, predicted)
+rmse(ages$AgeAtDeath,ages$newprediction)
+rmse(ages$AgeAtDeath,mean(ages$AgeAtDeath))
+#new variable
+ages <- transform(ages, Group = ifelse(AgeAtDeath <= 70, "Young", "Older"))
+summary(ages)
+qq <- seq(50,90,10)
+qq2 <- seq(52,90, length = 5)
+library(dplyr)
+ages <- mutate(ages, Rangos = cut(AgeAtDeath, qq, include.lowest = T))
+ages <- mutate(ages, Rangos = cut(AgeAtDeath, qq2, include.lowest = T))
+table(ages$Rangos)
+levels(ages$Rangos) <- list("50-60s" = c("[50,60]", "(60,70]"), "70-80s" = c("(70,80]", "(80,90]"))
+levels(ages$Rangos)<- c("cincuenta y sesenta", "setenta y ochenta")
+table(ages$Rangos)
+colSums(is.na(ages))
+path <- "C:/Users/Usuario/Documents/cursos/Data Analysis/forHackers"
+setwd(path)
+heights.weights <- read.csv("01_heights_weights_genders.csv")
+library(ggplot2)
+ggplot(heights.weights, aes(Height, Weight)) + geom_point() + geom_smooth(method = "lm")
+reg <- lm(Weight~Height, data = heights.weights)
+coef(reg)
+summary(reg)
+pred <- predict(reg)
+rmse(heights.weights$Weight, pred)
+sqrt(mean((reg$residuals)^2))
+summary(reg)
+heights.weights$pred <- pred
+reg$residuals
+residuals(reg)
+plot(reg, which = 1)
+#ggplot(reg, aes(x = fitted.values, y = residuals)) + geom_point() + 
+#  geom_smooth(method = "lm") + ylim(-50,47) +
+#  xlim(65, 260)
+===============
+  Web Traffic
+===============
+top <- read.csv("top_1000_sites.tsv.txt", sep = "\t", stringsAsFactors = F)
+str(top)
+uni <- as.data.frame(table(top$Category))
+uni <- arrange(uni,desc(Freq))
+head(uni)
+rank <- sapply(split(top$UniqueVisitors, top$Category), mean, na.rm = T)
+rank <- as.data.frame(rank)
+rank$names <- row.names(rank)
+head(rank)
+rank <- rename(rank, promedio = rank)
+rank <- arrange(rank, desc(promedio))
+head(rank, 10)
+social <- filter(top, Category == "Social Networks")
+arrange(social, desc(UniqueVisitors))
+names(top)
+social[,c(1,2,8)]
+ggplot(top, aes(PageViews, UniqueVisitors)) + geom_point()
+which.max(top$PageViews)
+which.max(top$UniqueVisitors)
+ggplot(top, aes(PageViews)) + geom_density()
+ggplot(top, aes(log(PageViews))) + geom_density()
+ggplot(top, aes(log(PageViews), log(UniqueVisitors))) + geom_point() +
+  geom_smooth(method = "lm")
+ggplot(top, aes(PageViews, UniqueVisitors)) + geom_point() +
+  scale_x_log10() + scale_y_log10() + geom_smooth(method = "lm")
+reg <- lm(log(PageViews) ~ log(UniqueVisitors), data = top)
+summary(reg)
+reg2 <- lm(log(PageViews) ~ HasAdvertising + log(UniqueVisitors) + InEnglish,
+          data = top)
+reg3 <- lm(log(PageViews) ~ HasAdvertising, data = top)
+reg4 <- lm(log(PageViews) ~ InEnglish, data = top)
+summary(reg4)
+summary(reg)
+summary(reg2)$r.squared
+summary(reg)$r.squared
+summary(reg3)$r.squared
+summary(reg4)$r.squared
+str(top)
+colSums(is.na(top))
+table(top$InEnglish)
+table((top$HasAdvertising))
+with(top, cor(PageViews, UniqueVisitors))
+coef(lm(scale(PageViews) ~ scale(UniqueVisitors), data = top))
+cor(top)
