@@ -1,0 +1,121 @@
+===============================
+Regularization: Text Regression
+===============================
+library(ggplot2)
+library(dplyr)
+set.seed(1)
+x <- seq(-10, 10, by = 0.01)
+x <- x+20
+y <- 1 - x ^ 2 + rnorm(length(x), 0, 5)
+data <- data.frame(x,y)
+ggplot(data, aes(x, y)) + geom_point() + geom_smooth(se = F)
+ggplot(data, aes(x, y)) + geom_point() + geom_smooth(method = "lm")
+reg <- lm(y ~ x, data = data)
+plot(reg, which = 1)
+x2 <- x^2
+data <- cbind(data, x2)
+ggplot(data, aes(x2, y)) + geom_point() + geom_smooth(method = "lm")
+ggplot(data, aes(x2, y)) + geom_point() + geom_smooth()
+reg2 <- lm(y ~ x2, data = data)
+plot(reg2, which = 1)
+summary(reg)$r.squared
+summary(reg2)$r.squared
+# Polynomial Regression
+set.seed(1)
+x <- seq(0, 1, by = 0.01)
+y <- sin(2*pi*x) + rnorm(length(x), 0, 0.1)
+df <- data.frame(x, y)
+ggplot(df, aes(x, y)) + geom_point() 
+reg3 <- lm(y~ x, data = df)
+summary(reg3)$r.squared
+plot(reg3, which = 1)
+ggplot(df, aes(x, y)) + geom_point() + geom_smooth(method = "lm")
+df$x2 <- x^2
+df$x3 <- x^3
+reg4 <- lm(y ~ x + x2 + x3, data = df)
+summary(reg3)$r.squared
+reg5 <- lm(y~., data = df)
+summary(reg5)
+reg6 <- lm(y~poly(x, degree = 14), data = df)
+summary(reg6)
+poly.fit <- lm(y~poly(x, degree = 1), data = df)
+df$pred <- predict(poly.fit)
+ggplot(df, aes(x, pred)) + geom_point() + geom_line()
+poly.fit <- lm(y~poly(x, degree = 3), data = df)
+df$pred <- predict(poly.fit)
+ggplot(df, aes(x, pred)) + geom_point() + geom_line()
+poly.fit <- lm(y~poly(x, degree = 5), data = df)
+df$pred <- predict(poly.fit)
+ggplot(df, aes(x, pred)) + geom_point() + geom_line()
+poly.fit <- lm(y~poly(x, degree = 25), data = df)
+df$pred <- predict(poly.fit)
+ggplot(df, aes(x, pred)) + geom_point() + geom_line()
+#Preventing Overfitting
+#Cross-validation
+set.seed(1)
+x <- seq(0, 1, by = 0.01)
+y <- sin(2 * pi * x) + rnorm(length(x), 0, 0.1)
+n <- length(x)
+indices <- sort(sample(1:n, round(0.5*n)))
+train.x <- x[indices]
+train.y <- y[indices]
+test.x <- x[-indices]
+test.y <- y[-indices]
+train.df <- data.frame(X = train.x, Y = train.y)
+test.df <- data.frame(X = test.x, Y = test.y)
+library(Metrics)
+perf <- data.frame()
+for (d in 1:12) 
+{
+  poly.fit <- lm(Y ~ poly(X, degree = d), data = train.df)
+  perf <- rbind(perf, 
+                data.frame(Degree = d, 
+                           Data = "Training",
+                           RMSE = rmse(train.y, predict(poly.fit))))
+  perf <- rbind(perf, 
+                data.frame(Degree = d, 
+                           Data = "Test",
+                           RMSE = rmse(test.y, predict(poly.fit,
+                                       newdata = test.df))))
+  }
+ggplot(perf, aes(Degree, RMSE, linetype = Data)) + geom_point()+geom_line()
+#Regularization
+library(glmnet)
+library(Metrics)
+library(ggplot2)
+x <- seq(0, 1, 0.01)
+y <- sin(2 * pi * x) + rnorm(length(x), 0, 0.1)
+n <- length(x)
+indices <- sort(sample(1:n, round(0.5*n)))
+train.x <- x[indices]
+train.y <- y[indices]
+test.x <- x[-indices]
+test.y <- y[-indices]
+df <- data.frame(X = x, Y = y)
+train.df <- data.frame(X = train.x, Y = train.y)
+test.df <- data.frame(X = test.x, Y = test.y)
+#Lambda
+with(train.df, glmnet(poly(X, degree = 10), Y))
+glmnet.fit <- with(train.df, glmnet(poly(X, degree = 10), Y))
+plot(glmnet.fit)
+lambdas <- glmnet.fit$lambda
+perform <- data.frame()
+for(lambda in lambdas){
+  perform <- rbind(perform, 
+                   data.frame(Lambda = lambda, 
+                              RMSE = rmse(test.y, with(test.df, predict(glmnet.fit,
+                                     poly(X, degree = 10), s = lambda)))))
+}
+ggplot(perform, aes(Lambda, RMSE)) + geom_point() + geom_line()  
+best.lambda <- with(perform, Lambda[which(RMSE == min(RMSE))])
+perform$RMSE[which.min(perform$RMSE)]
+#Lambda
+glmnet.fit <- with(df, glmnet(poly(X, degree = 10), Y))
+coef(glmnet.fit, s = best.lambda)
+===========================
+coef(glmnet.fit, s = 0.1)
+cvfit = with(df, cv.glmnet(poly(X, degree = 10), Y))
+plot(cvfit)
+cvfit$lambda.min
+coef(cvfit, s = "lambda.min")
+coef(cvfit, s = 0.001846518)
