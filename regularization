@@ -119,3 +119,71 @@ plot(cvfit)
 cvfit$lambda.min
 coef(cvfit, s = "lambda.min")
 coef(cvfit, s = 0.001846518)
+#Example: Text Regression
+#Cross validation & regularization
+library(tm)
+library(glmnet)
+library(Metrics)
+library(ggplot2)
+path <- "C:/Users/Usuario/Documents/cursos/Data Analysis/forHackers"
+setwd(path)
+ranks <- read.csv("oreilly.csv", stringsAsFactors = F)
+documents <- data.frame(Text = ranks$Long.Desc.)
+row.names(documents) <- 1:nrow(documents)
+corpus <- Corpus(DataframeSource(documents))
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, stripWhitespace) 
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+dtm <- DocumentTermMatrix(corpus)
+x <- as.matrix(dtm)
+y <- c(100:1)
+set.seed(1)
+perf <- data.frame()
+for(lambda in c(0.1, 0.25, 0.5, 1, 2, 5)){
+  for(i in 1:50)
+  {
+  indices <- sample(1:100, 80)
+  training.x <- x[indices, ]
+  training.y <- y[indices]
+  test.x <- x[-indices, ]
+  test.y <- y[-indices]
+  glm.fit <- glmnet(training.x, training.y)
+  pred.y <- predict(glm.fit, test.x, s = lambda)
+  rmse <- rmse(pred.y, test.y)
+  perf <- rbind(perf, data.frame(Lambda = lambda, Iteration = i, RMSE = rmse))
+    }
+}
+ggplot(perf, aes(Lambda, RMSE))+
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar") +
+  stat_summary(fun.data = "mean_cl_boot", geom = "point")
+#Failed Attempt
+=====================
+logistic regression
+=====================
+#Classification problem
+y <- rep(c(1,0), each = 50)
+reg.fit <- glmnet(x, y, family = "binomial")
+ifelse(predict(reg.fit, newx = x, s = 0.001) > 0, 1, 0)
+library(boot)
+inv.logit(predict(reg.fit, newx = x, s = 0.001))
+#logistic model
+set.seed(1)
+perf <- data.frame()
+for(i in 1:250){
+  indices <- sample(1:100, 80)
+  training.x <- x[indices, ]
+  training.y <- y[indices]
+  test.x <- x[-indices, ]
+  test.y <- y[-indices]
+  for(lambda in c(0.0001, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.5, 0.1)){
+    glm.fit <- glmnet(training.x, training.y, family = "binomial")
+    pred.y <- ifelse(predict(glm.fit, test.x, s = lambda)> 0, 1, 0)
+    error.rate <- mean(pred.y != test.y)
+    perf <- rbind(perf, data.frame(Lambda = lambda, Iteration = i, 
+                                   ErrorRate = error.rate))
+  }
+}
+ggplot(perf, aes(Lambda, ErrorRate)) + 
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar") +
+  stat_summary(fun.data = "mean_cl_boot", geom = "point") +
+  scale_x_log10()
